@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "layer-streamlit",
+      "runtimeExecutable": "C:\\Users\\PC\\OneDrive\\Área de Trabalho\\THROprojetos\\layer-perfumes\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "streamlit", "run", "layer/ui/app.py", "--server.headless=true"],
+      "port": 8501
+    }
+  ]
+}
