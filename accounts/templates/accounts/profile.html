@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Meu perfil — Layer{% endblock %}
+{% block content %}
+<h1>Meu perfil</h1>
+{% if user.profile.avatar %}
+    <img src="{{ user.profile.avatar.url }}" alt="Avatar" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+{% endif %}
+<form method="post" enctype="multipart/form-data" style="max-width:360px; margin-top:1rem;">
+    {% csrf_token %}
+    {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<small style="color:var(--accent);">{{ field.errors|striptags }}</small>{% endif %}
+        </div>
+    {% endfor %}
+    <button type="submit">Salvar</button>
+</form>
+{% endblock %}
