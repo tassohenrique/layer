@@ -34,15 +34,17 @@ pip install -r requirements.txt
 cp .env.example .env              # ajuste se for usar Postgres (DATABASE_URL)
 
 python manage.py migrate
-python manage.py seed_perfumes    # popula o catálogo com ~20 perfumes de nicho reais
+python manage.py seed_perfumes    # popula o catálogo com 35 perfumes reais (nicho + designer)
 python manage.py createsuperuser  # acesso ao /admin/, pra cadastrar/editar perfumes
 
 python manage.py runserver
 ```
 
 Abra `http://localhost:8000`. Cadastro de perfumes (marca, notas,
-accords) é feito pelo `/admin/` no MVP — ainda não tem uma tela própria
-de CRUD de catálogo.
+accords, imagem do frasco) é feito pelo `/admin/` no MVP — ainda não tem
+uma tela própria de CRUD de catálogo. A imagem é opcional e sempre
+upload manual (sem scraping de nenhum site); sem ela, aparece um
+placeholder.
 
 ## Rodando os testes
 
