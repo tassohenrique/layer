@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ perfume.name }} — Layer{% endblock %}
+{% block content %}
+<p><a href="{% url 'catalog:perfume_list' %}">← Perfumes</a></p>
+<h1>{{ perfume.name }}</h1>
+<p style="color:var(--muted);">{{ perfume.brand.name }}{% if perfume.launch_year %} · {{ perfume.launch_year }}{% endif %}</p>
+
+<p>
+    {% if stats.count %}
+        ★ {{ stats.average|floatformat:1 }} de 5 &middot; {{ stats.count }} review{{ stats.count|pluralize }}
+    {% else %}
+        Ainda sem reviews — seja a primeira pessoa a avaliar.
+    {% endif %}
+</p>
+
+<h2>Ficha técnica</h2>
+<ul>
+    <li><strong>Marca:</strong> {{ perfume.brand.name }}</li>
+    {% if perfume.perfumer %}<li><strong>Perfumista:</strong> {{ perfume.perfumer }}</li>{% endif %}
+    <li><strong>Concentração:</strong> {{ perfume.get_concentration_display }}</li>
+    {% if perfume.launch_year %}<li><strong>Ano de lançamento:</strong> {{ perfume.launch_year }}</li>{% endif %}
+</ul>
+
+{% if perfume.accords.all %}
+<h2>Acordes</h2>
+<div>
+    {% for accord in perfume.accords.all %}
+        <span style="display:inline-block; background:#f3ede4; border-radius:999px; padding:0.25rem 0.75rem; margin:0 0.35rem 0.35rem 0; font-size:0.85rem;">{{ accord.label_pt }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h2>Pirâmide olfativa</h2>
+<ul>
+    <li><strong>Topo:</strong> {% for n in perfume.notes_top.all %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</li>
+    <li><strong>Coração:</strong> {% for n in perfume.notes_heart.all %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</li>
+    <li><strong>Base:</strong> {% for n in perfume.notes_base.all %}{{ n.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</li>
+</ul>
+
+<h2>Reviews</h2>
+{% if user.is_authenticated %}
+    <form method="post" action="{% url 'reviews:create_review' slug=perfume.slug %}" style="border:1px solid var(--border); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+        {% csrf_token %}
+        <p style="margin-top:0;">{% if user_review %}Editar sua review{% else %}Escreva sua review{% endif %}</p>
+        <div class="field">
+            <label for="{{ form.rating.id_for_label }}">Nota (1–5)</label>
+            {{ form.rating }}
+        </div>
+        <div class="field">
+            <label for="{{ form.text.id_for_label }}">Comentário</label>
+            {{ form.text }}
+        </div>
+        <button type="submit">{% if user_review %}Salvar alteração{% else %}Publicar review{% endif %}</button>
+    </form>
+{% else %}
+    <p><a href="{% url 'accounts:login' %}?next={{ request.path }}">Entre</a> pra deixar sua review.</p>
+{% endif %}
+
+{% for review in reviews %}
+    <div style="border-bottom:1px solid var(--border); padding:0.85rem 0;">
+        <strong>{{ review.user.profile.name }}</strong>
+        <span style="color:var(--muted);">★ {{ review.rating }}/5 · {{ review.created_at|date:"d/m/Y" }}</span>
+        <p style="margin:0.35rem 0 0;">{{ review.text }}</p>
+    </div>
+{% empty %}
+    <p style="color:var(--muted);">Nenhuma review ainda.</p>
+{% endfor %}
+{% endblock %}
