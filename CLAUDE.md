@@ -5,133 +5,134 @@ completo antes de gerar qualquer código.
 
 ## Visão geral do projeto
 
-App **local-first** (sem backend hospedado, sem nuvem, sem API paga) para
-quem coleciona perfumes de nicho: cataloga a coleção, sugere combinações de
-**layering** (aplicar duas fragrâncias juntas) com base em regras reais de
-perfumaria, mantém um diário de uso e mostra visualizações da coleção.
-Interface em Streamlit, banco SQLite local (`layer.db`).
+O Layer é uma plataforma pública de **reviews de perfumes**, nos moldes do
+Fragrantica — página de perfume com pirâmide olfativa, accords, ficha
+técnica e nota média da comunidade; usuários logados escrevem reviews.
 
-**Fase atual:** MVP funcional (coleção, sugestor, diário, visualizações,
-alertas de estoque, sugestão sazonal). Falta só a integração opcional com a
-API da Anthropic — ver "Dívidas técnicas / fase 2" abaixo.
+**Princípio de design inegociável, válido em qualquer fase:** nenhum
+anúncio e nenhum bloqueio de navegação (ex.: paywall por "muitas páginas
+visitadas"). É a principal reclamação da comunidade sobre o concorrente, e
+o Layer existe pra ser a alternativa sem isso — nunca adicionar anúncios
+ou limites de navegação, mesmo que pareça uma forma óbvia de monetizar.
+
+**Fase atual: MVP (Fase 1) do roteiro de evolução** — catálogo de
+perfumes + reviews + autenticação. Fases 2 e 3 estão documentadas em
+"Roadmap" abaixo, não implementadas ainda.
+
+### Histórico: pivot de produto
+
+Até este ponto, o Layer era um app **pessoal** (Streamlit + SQLite, um
+usuário só, sem login) pra catalogar a própria coleção e sugerir
+combinações de layering. Esse código foi preservado em `legacy/` — não
+apagado, porque a lógica do motor de compatibilidade
+(`legacy/layer/domain/compatibility.py`, `families.py`) é candidata a
+virar a base do recomendador da Fase 3 ("se você gosta de X, também pode
+gostar de Y"). `legacy/` não faz parte do app atual: não importar de lá
+em `catalog/`, `reviews/` ou `accounts/`.
 
 ## Stack
 
-- Python 3.11+, tipagem estrita (`from __future__ import annotations`,
-  type hints em toda função pública)
-- SQLite via SQLAlchemy 2.x (`layer.db`, arquivo local)
-- Streamlit (UI, multi-page em `layer/ui/pages/`)
-- Pydantic v2 (schemas de validação/serialização — `FragranceRead`,
-  `FragranceCreate`, `FragranceUpdate`)
-- Pandas (import/export CSV), Plotly (gráficos), Pytest (testes)
+- Django 6.x + Postgres (via `dj-database-url` lendo `DATABASE_URL`; sem
+  a variável, cai pra SQLite local — não há Postgres instalado nesta
+  máquina de dev, então o fallback evita travar em setup de banco)
+- `psycopg[binary]` (driver Postgres)
+- `python-decouple` pra `.env` (mesmo padrão de `.env.local` que
+  finance-app e cstiltility usam)
+- Pillow (avatar de perfil via `ImageField`)
+- Autenticação: `django.contrib.auth` nativo — sem `django-allauth` no
+  MVP, não há OAuth nem verificação de e-mail ainda
+- Templates Django server-rendered, CSS mínimo inline (sem framework de
+  UI ainda — a Fase 1 prioriza a estrutura de dados e as telas
+  funcionando, não o visual)
+- `pytest-django` para testes
 
-Tudo roda localmente. Sem dependência de rede em tempo de execução — isso é
-uma decisão de produto, não só técnica (ver "O que não fazer" abaixo).
+## Schema (Fase 1)
+
+```
+Brand         — name, slug
+Accord        — key, label_pt   (família olfativa: amadeirado, cítrico...)
+Note          — name            (nota individual: bergamota, baunilha...)
+
+Perfume       — brand (FK), name, slug, launch_year, perfumer,
+                concentration (cologne/edt/edp/parfum/extrait),
+                notes_top/notes_heart/notes_base (M2M Note),
+                accords (M2M Accord)
+
+Review        — perfume (FK), user (FK), rating (1-5), text,
+                created_at, updated_at
+                unique_together (perfume, user) — 1 review por pessoa
+
+Profile       — user (OneToOne), display_name, avatar
+                criado automaticamente via signal no post_save de User
+```
 
 ## Decisões de arquitetura já tomadas
 
-- **Domínio puro** (`layer/domain/`): não importa SQLAlchemy nem Streamlit,
-  opera só sobre schemas Pydantic (`FragranceRead`). É por isso que
-  `compatibility.py` é testável sem banco nem UI — não quebre esse
-  isolamento importando `layer.models` ou `layer.db` de dentro de
-  `layer/domain/`.
-- **Serviços fazem a ponte** (`layer/services/`): recebem uma `Session` do
-  SQLAlchemy, leem/escrevem `layer.models.Fragrance`, convertem de/para os
-  schemas Pydantic que o domínio entende. Toda regra de negócio fica no
-  domínio, não nos serviços — serviço é CRUD + tradução, nada mais.
-  Exemplo: `low_stock_fragrances()` só filtra por `ml_remaining`, não decide
-  o que fazer com o resultado — quem decide é a UI.
-- **UI só chama serviços** (`layer/ui/`): nunca acessa `layer.db` ou
-  `layer.models` diretamente, nunca importa `layer/domain/` sem passar por
-  um serviço primeiro.
-- **O motor de compatibilidade nunca bloqueia uma combinação.** Mesmo pares
-  "arriscados" (score baixo) são retornados, só sinalizados como
-  experimentais (`is_experimental=True`). Isso é intencional — o app avisa,
-  o usuário decide. Qualquer feature nova de scoring deve seguir esse
-  princípio: penalizar no score, não impedir de sugerir.
-- **Score é sempre um inteiro 0–100**, ajustado em camadas por
-  `evaluate_pair()` (`_intensity_adjustment`, `_season_adjustment`,
-  `_concentration_adjustment`, `_sweet_clash_adjustment`, e depois os vieses
-  de intenção/ocasião em `suggest_from_scratch`). Cada ajuste é uma função
-  isolada e documentada com a *regra de perfumaria* por trás dele — ao
-  adicionar um novo ajuste, siga o padrão: função pequena, docstring
-  explicando o porquê olfativo, e sempre `max(0, min(100, score))` no final.
-- **Papel líder/modificador é determinístico** (`assign_roles()`): decidido
-  por intensidade → concentração → notas de fundo → id (desempate estável).
-  Não introduza aleatoriedade aqui — os testes dependem de resultado
-  reproduzível.
-- **Matriz de famílias olfativas é dado, não texto solto**
-  (`layer/domain/families.py`) — é isso que permite testar
-  `get_family_pair_rule()` sem parsing de string. Nova combinação de
-  famílias entra como entrada na matriz, não como `if/elif`.
+- **Nota média e contagem de votos são calculadas em tempo real**
+  (`Perfume.rating_stats`, um `aggregate(Avg, Count)`), não um campo
+  cacheado. Dataset pequeno no MVP — não vale a complexidade de manter
+  cache sincronizado ainda. Se o ranking "em alta" da Fase 3 pedir mais
+  performance, cacheia então (e só então).
+- **Reenviar o formulário de review atualiza a review existente**, não
+  duplica — o `unique_together (perfume, user)` é a fonte de verdade, e
+  `reviews/views.py::create_review` faz `Review.objects.filter(...).first()`
+  antes de decidir criar ou atualizar via `ModelForm(instance=...)`.
+- **Cadastro de catálogo (Brand/Accord/Note/Perfume) fica pelo Django
+  Admin no MVP** — não construir uma tela própria de CRUD de perfume
+  ainda, o admin já resolve pra quem cadastra conteúdo.
+- **Accords reaproveitam as famílias olfativas do motor antigo**
+  (rótulos em português de `legacy/layer/domain/families.py`), portados
+  pra `catalog/management/commands/seed_perfumes.py::ACCORD_LABELS_PT` —
+  evita reinventar a taxonomia de famílias que já existia e era testada.
+- **`DATABASE_URL` opcional com fallback SQLite**: não force Postgres
+  local. Se for adicionar algo que só funciona em Postgres (ex.: full
+  text search nativo), documente isso — hoje o projeto roda 100% em
+  SQLite pra dev.
 
 ## Convenções de código
 
-- Type hints em tudo; `from __future__ import annotations` no topo de cada
-  módulo novo.
-- Dataclasses de domínio usam `@dataclass(slots=True)`.
-- Docstrings em português, focadas no **porquê** da regra de negócio (a
-  lógica de perfumaria por trás do ajuste de score), não em repetir o que o
-  código já deixa óbvio.
-- Nomes de funções/variáveis em inglês; textos voltados ao usuário
-  (`rationale`, mensagens de UI) em português.
-- Funções privadas de ajuste de score prefixadas com `_` e vivem em
-  `layer/domain/compatibility.py` perto de `evaluate_pair`.
+- Um app Django por domínio: `catalog` (Brand/Accord/Note/Perfume),
+  `reviews` (Review), `accounts` (Profile + auth). Não misturar — uma
+  view de review vive em `reviews/views.py`, nunca em `catalog/`.
+  `catalog/views.py::perfume_detail` importa `reviews.forms.ReviewForm`
+  só pra montar o formulário na página; a criação em si é
+  `reviews:create_review`.
+- Templates de cada app ficam em `<app>/templates/<app>/*.html`
+  (`APP_DIRS=True`), estendendo `templates/base.html`.
+- Slugs são gerados automaticamente no `save()` do model
+  (`Brand.slug`, `Perfume.slug`) — nunca pedir slug em formulário.
+- Migrations sempre commitadas junto com a mudança de model que as gerou
+  (não rodar `makemigrations` num commit separado).
 
-## Dívidas técnicas / fase 2
+## Roadmap (não implementado ainda)
 
-- **Alertas de reposição de estoque** — implementado.
-  `fragrance_service.low_stock_fragrances()` alimenta a seção "Estoque
-  baixo" da home (`layer/ui/app.py`) e a coluna "Estoque" da tabela em
-  `layer/ui/pages/1_colecao.py`. Threshold fixo em 15ml em ambos os
-  lugares — se isso virar configurável, centralize o valor em vez de
-  duplicar o número.
-- **Sugestão sazonal automática** — implementado.
-  `layer.domain.compatibility.suggest_for_season()` prioriza pares cuja
-  `best_season` bate com `current_season()`, com fallback pro ranking geral
-  se nada bater. Exposto via `combo_service.get_seasonal_suggestions()` na
-  home, reusando `layer.ui.components.render_suggestion_card` (o mesmo
-  componente da página Sugestor — não duplique a renderização de card de
-  sugestão, estenda `components.py`).
-- **Integração com API da Anthropic** para gerar descrições mais literárias
-  no lugar do `rationale` baseado em regras: mencionada no README como
-  possibilidade futura, sem código ainda. É a única pendência que rompe a
-  promessa "local-first, sem API paga" — não implementar sem alinhar antes
-  se isso ainda é o que o produto quer.
+### Fase 2 — engajamento e descoberta
+- Busca por notas olfativas e por accords
+- Favoritar perfumes (wishlist)
+- Coleção pessoal ("perfumes que eu tenho") — possível ponto de reconexão
+  com o conceito do app antigo, mas agora como feature social, não como
+  produto isolado
+- Curtir reviews de outros usuários
+- Editar review após um tempo de uso ("atualização após 3 meses"),
+  mantendo o histórico da review original
 
-## O que não fazer
-
-- Não fazer scraping de sites como Fragrantica (viola termos de uso deles)
-  — cadastro de fragrância é manual ou via CSV/JSON.
-- Não adicionar dependência de rede em tempo de execução sem decisão
-  explícita — o app é local-first por design, não por acidente.
-- Não deixar o motor de compatibilidade bloquear uma sugestão — penalizar
-  no score, nunca omitir o par.
-- Não importar SQLAlchemy/Streamlit dentro de `layer/domain/`.
-
-## Onde mexer em quê
-
-- Regras de layering (score, papel líder/modificador, textos de
-  combinação): `layer/domain/compatibility.py` e `layer/domain/families.py`.
-- Regras de estação: `layer/domain/seasons.py`.
-- CRUD e queries: `layer/services/*.py` (um arquivo por entidade/fluxo:
-  `fragrance_service`, `combo_service`, `journal_service`,
-  `importexport_service`).
-- Páginas e navegação: `layer/ui/app.py` (entrypoint) e `layer/ui/pages/`
-  (uma página por número de ordem no menu lateral). Componentes Streamlit
-  reusados por mais de uma página (ex.: card de sugestão) vivem em
-  `layer/ui/components.py`.
-- Schemas de validação/serialização: `layer/schemas.py`. Modelos de banco:
-  `layer/models.py`.
+### Fase 3 — diferenciais avançados
+- Recomendador simples por accords/notas em comum (sem ML) — candidato
+  natural a reaproveitar `legacy/layer/domain/compatibility.py`
+- "Em alta": ranking por atividade recente (reviews/favoritos)
+- Comparador de perfumes lado a lado
+- Diretório de marcas (`Brand` já existe, falta a página de navegação)
+- Conteúdo editorial (artigos/notícias de lançamento)
 
 ## Comandos
 
 ```bash
-pip install -r requirements.txt   # instalar dependências
-python seed_data.py               # popular o banco com ~20 perfumes de nicho reais
-streamlit run layer/ui/app.py     # subir o app (cria layer.db automaticamente)
-pytest                            # rodar os testes (compatibility.py + services, com SQLite em memória)
+pip install -r requirements.txt        # instalar dependências
+python manage.py migrate               # aplicar migrations (SQLite por padrão)
+python manage.py seed_perfumes         # popular o catálogo com os ~20 perfumes do seed antigo
+python manage.py createsuperuser       # criar acesso ao /admin/
+python manage.py runserver             # subir o app em http://localhost:8000
+pytest                                 # rodar os testes (exclui legacy/, ver pytest.ini)
 ```
 
-Mais contexto de produto, instalação e estrutura completa de pastas em
-[README.md](./README.md).
+Mais contexto de produto e telas em [README.md](./README.md).
