@@ -54,7 +54,7 @@ Accord        — key, label_pt   (família olfativa: amadeirado, cítrico...)
 Note          — name            (nota individual: bergamota, baunilha...)
 
 Perfume       — brand (FK), name, slug, launch_year, perfumer,
-                concentration (cologne/edt/edp/parfum/extrait),
+                concentration (cologne/edt/edp/parfum/extrait), image,
                 notes_top/notes_heart/notes_base (M2M Note),
                 accords (M2M Accord)
 
@@ -80,6 +80,11 @@ Profile       — user (OneToOne), display_name, avatar
 - **Cadastro de catálogo (Brand/Accord/Note/Perfume) fica pelo Django
   Admin no MVP** — não construir uma tela própria de CRUD de perfume
   ainda, o admin já resolve pra quem cadastra conteúdo.
+- **Imagem de perfume é upload manual pelo admin** (`Perfume.image`,
+  `null=True, blank=True`) — não existe scraping nem download automático
+  de foto de nenhuma fonte externa (mesmo princípio de não fazer scraping
+  do Fragrantica). Sem imagem, a lista e a página do perfume mostram um
+  placeholder (🌸), nunca um espaço quebrado.
 - **Accords reaproveitam as famílias olfativas do motor antigo**
   (rótulos em português de `legacy/layer/domain/families.py`), portados
   pra `catalog/management/commands/seed_perfumes.py::ACCORD_LABELS_PT` —

@@ -77,4 +77,4 @@ class TestSeedCommand:
         call_command("seed_perfumes")
 
         assert Perfume.objects.count() == total_after_first
-        assert total_after_first == 20
+        assert total_after_first == 35

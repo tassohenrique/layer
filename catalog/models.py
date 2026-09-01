@@ -60,6 +60,7 @@ class Perfume(models.Model):
     launch_year = models.PositiveSmallIntegerField(null=True, blank=True)
     perfumer = models.CharField(max_length=150, blank=True)
     concentration = models.CharField(max_length=10, choices=Concentration.choices, default=Concentration.EDP)
+    image = models.ImageField(upload_to="perfumes/", null=True, blank=True)
 
     notes_top = models.ManyToManyField(Note, related_name="top_of", blank=True)
     notes_heart = models.ManyToManyField(Note, related_name="heart_of", blank=True)
