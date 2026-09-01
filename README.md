@@ -1,8 +1,19 @@
 # Layer 🌸
 
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.x-D71F00)
+![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)
+![Pytest](https://img.shields.io/badge/tested%20with-pytest-0A9EDC?logo=pytest&logoColor=white)
+![Local-first](https://img.shields.io/badge/local--first-sem%20nuvem-success)
+
 App local-first para catalogar uma coleção de perfumes de nicho, receber
 sugestões de **layering** (combinação de fragrâncias) baseadas em regras
 reais de perfumaria, manter um diário de uso e visualizar a coleção.
+
+## Screenshot
+
+![Sugestor de Layering — sugestão gerada para Interlude Man](docs/screenshot.png)
 
 ## Stack
 
