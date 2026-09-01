@@ -139,3 +139,6 @@ deles.
   `layer.domain.seasons.current_season()` já existe como base.
 - Integração opcional com a API da Anthropic para gerar descrições mais
   literárias das combinações.
+
+Mais detalhes de arquitetura, convenções e decisões já tomadas em
+[CLAUDE.md](./CLAUDE.md).
