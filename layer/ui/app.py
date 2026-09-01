@@ -8,9 +8,11 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
-from layer.db import init_db
-from layer.services.fragrance_service import list_fragrances
-from layer.db import session_scope
+from layer.db import init_db, session_scope
+from layer.domain.seasons import SEASON_LABELS_PT, current_season
+from layer.models import Intention, Occasion
+from layer.services import combo_service, fragrance_service
+from layer.ui.components import render_suggestion_card
 
 st.set_page_config(page_title="Layer — Layering de Perfumes de Nicho", page_icon="🌸", layout="wide")
 
@@ -20,8 +22,9 @@ st.title("🌸 Layer")
 st.caption("Catálogo, motor de compatibilidade e diário de layering para perfumaria de nicho.")
 
 with session_scope() as session:
-    total = len(list_fragrances(session))
-    owned = len(list_fragrances(session, owned=True))
+    total = len(fragrance_service.list_fragrances(session))
+    owned = len(fragrance_service.list_fragrances(session, owned=True))
+    low_stock = fragrance_service.low_stock_fragrances(session)
 
 col1, col2 = st.columns(2)
 col1.metric("Fragrâncias cadastradas", total)
@@ -50,3 +53,46 @@ if total == 0:
         "terminal ou cadastre manualmente na página **Coleção**.",
         icon="💡",
     )
+
+st.divider()
+
+# --- Alerta de reposição de estoque ---------------------------------------
+st.subheader("📦 Estoque baixo")
+
+if low_stock:
+    st.warning(
+        f"{len(low_stock)} fragrância(s) precisando de reposição (15ml ou menos restantes):",
+        icon="⚠️",
+    )
+    for f in low_stock:
+        st.write(f"- **{f.name}** ({f.brand}) — {f.ml_remaining}/{f.bottle_ml} ml restantes")
+else:
+    st.caption("Nada acabando — estoque OK.")
+
+st.divider()
+
+# --- Sugestão sazonal automática -------------------------------------------
+season = current_season()
+st.subheader(f"🍂 Sugestão para {SEASON_LABELS_PT[season]}")
+
+if owned < 2:
+    st.caption("Cadastre pelo menos 2 fragrâncias possuídas para receber uma sugestão sazonal.")
+else:
+    s_col1, s_col2 = st.columns(2)
+    with s_col1:
+        home_intention = st.selectbox(
+            "Intenção (usada só ao salvar)", list(Intention), format_func=lambda i: i.value, key="home_intention"
+        )
+    with s_col2:
+        home_occasion = st.selectbox(
+            "Ocasião (usada só ao salvar)", list(Occasion), format_func=lambda o: o.value, key="home_occasion"
+        )
+
+    with session_scope() as session:
+        seasonal_suggestions = combo_service.get_seasonal_suggestions(session, season=season.value, top_n=3)
+
+    if seasonal_suggestions:
+        for i, suggestion in enumerate(seasonal_suggestions):
+            render_suggestion_card(suggestion, f"home_{i}", home_intention.value, home_occasion.value)
+    else:
+        st.caption("Nenhuma combinação encontrada ainda.")

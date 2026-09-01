@@ -1,7 +1,13 @@
 """Testes do motor de compatibilidade — a lógica de negócio mais importante do app."""
 from __future__ import annotations
 
-from layer.domain.compatibility import assign_roles, evaluate_pair, suggest_combos, suggest_from_scratch
+from layer.domain.compatibility import (
+    assign_roles,
+    evaluate_pair,
+    suggest_combos,
+    suggest_for_season,
+    suggest_from_scratch,
+)
 from layer.schemas import FragranceRead
 
 
@@ -182,3 +188,32 @@ class TestSuggestFromScratch:
         suggestions = suggest_from_scratch([a, b, c, d], intention="ecoar")
 
         assert suggestions[0].category == "reforco"
+
+
+class TestSuggestForSeason:
+    def test_prioriza_pares_com_sobreposicao_de_estacao(self) -> None:
+        inverno_a = make_fragrance(1, "Inverno A", primary_family="amadeirado", intensity=3, best_season=["inverno"])
+        inverno_b = make_fragrance(2, "Inverno B", primary_family="ambar", intensity=2, best_season=["inverno"])
+        verao_a = make_fragrance(3, "Verão A", primary_family="citrico", intensity=2, best_season=["verao"])
+        verao_b = make_fragrance(4, "Verão B", primary_family="verde", intensity=2, best_season=["verao"])
+
+        suggestions = suggest_for_season([inverno_a, inverno_b, verao_a, verao_b], season="inverno")
+
+        assert suggestions[0].base_fragrance.name in {"Inverno A", "Inverno B"}
+        assert suggestions[0].modifier_fragrance.name in {"Inverno A", "Inverno B"}
+
+    def test_sem_sobreposicao_cai_para_ranking_geral(self) -> None:
+        a = make_fragrance(1, "A", primary_family="amadeirado", intensity=3, best_season=["verao"])
+        b = make_fragrance(2, "B", primary_family="ambar", intensity=2, best_season=["verao"])
+
+        suggestions = suggest_for_season([a, b], season="inverno")
+
+        assert len(suggestions) == 1
+
+    def test_ignora_fragrancias_nao_possuidas(self) -> None:
+        a = make_fragrance(1, "A", primary_family="amadeirado", intensity=3)
+        b = make_fragrance(2, "B", primary_family="ambar", intensity=2, owned=False)
+
+        suggestions = suggest_for_season([a, b], season="inverno")
+
+        assert suggestions == []

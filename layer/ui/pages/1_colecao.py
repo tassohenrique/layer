@@ -76,6 +76,7 @@ with session_scope() as session:
             "Intensidade": f.intensity, "Gênero": f.gender.value,
             "Possuído": "Sim" if f.owned else "Não",
             "ml restante": f"{f.ml_remaining}/{f.bottle_ml}",
+            "Estoque": "⚠️ Baixo" if f.owned and f.ml_remaining <= 15 else "OK",
             "Nota pessoal": f.personal_rating or "-",
         }
         for f in fragrances

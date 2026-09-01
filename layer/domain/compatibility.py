@@ -265,3 +265,21 @@ def suggest_from_scratch(
 
     suggestions.sort(key=lambda s: s.compatibility_score, reverse=True)
     return suggestions[:top_n]
+
+
+def suggest_for_season(collection: list[FragranceRead], season: Season | str, top_n: int = 5) -> list[ComboSuggestion]:
+    """Sugere os melhores pares da coleção para a estação dada, sem viés de intenção.
+
+    Usado pela sugestão sazonal automática ("hoje está frio, sugiro X"):
+    prioriza pares cuja `best_season` (calculada por `evaluate_pair`) inclui
+    a estação pedida; se nenhum par tiver essa sobreposição, cai para o
+    ranking geral por score, em vez de retornar uma lista vazia.
+    """
+    season_enum = Season(season) if not isinstance(season, Season) else season
+    owned = [f for f in collection if f.owned]
+    suggestions = [evaluate_pair(frag_a, frag_b) for frag_a, frag_b in itertools.combinations(owned, 2)]
+
+    in_season = [s for s in suggestions if season_enum in s.best_season]
+    ranked = in_season if in_season else suggestions
+    ranked.sort(key=lambda s: s.compatibility_score, reverse=True)
+    return ranked[:top_n]

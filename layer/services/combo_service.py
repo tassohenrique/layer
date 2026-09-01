@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from layer.domain.compatibility import ComboSuggestion, suggest_combos, suggest_from_scratch
+from layer.domain.compatibility import ComboSuggestion, suggest_combos, suggest_for_season, suggest_from_scratch
 from layer.models import Fragrance, LayeringCombo
 from layer.schemas import FragranceRead
 
@@ -34,6 +34,11 @@ def get_suggestions_from_scratch(
 ) -> list[ComboSuggestion]:
     collection = _collection_as_schemas(session)
     return suggest_from_scratch(collection, intention=intention, occasion=occasion, season=season, top_n=top_n)
+
+
+def get_seasonal_suggestions(session: Session, season: str, top_n: int = 3) -> list[ComboSuggestion]:
+    collection = _collection_as_schemas(session)
+    return suggest_for_season(collection, season=season, top_n=top_n)
 
 
 def save_combo(

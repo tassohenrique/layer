@@ -11,9 +11,9 @@ quem coleciona perfumes de nicho: cataloga a coleção, sugere combinações de
 perfumaria, mantém um diário de uso e mostra visualizações da coleção.
 Interface em Streamlit, banco SQLite local (`layer.db`).
 
-**Fase atual:** MVP funcional (coleção, sugestor, diário, visualizações).
-Duas peças de "fase 2" já têm a lógica de negócio pronta e testada, mas
-**não estão conectadas à UI** — ver "Dívidas técnicas / fase 2" abaixo.
+**Fase atual:** MVP funcional (coleção, sugestor, diário, visualizações,
+alertas de estoque, sugestão sazonal). Falta só a integração opcional com a
+API da Anthropic — ver "Dívidas técnicas / fase 2" abaixo.
 
 ## Stack
 
@@ -78,18 +78,24 @@ uma decisão de produto, não só técnica (ver "O que não fazer" abaixo).
 - Funções privadas de ajuste de score prefixadas com `_` e vivem em
   `layer/domain/compatibility.py` perto de `evaluate_pair`.
 
-## Dívidas técnicas / fase 2 (lógica pronta, UI pendente)
+## Dívidas técnicas / fase 2
 
-- **Alertas de reposição de estoque**: `fragrance_service.low_stock_fragrances()`
-  já existe, testado, recebe `threshold_ml`. Falta só a chamada a partir de
-  alguma página Streamlit (ex.: badge na Coleção ou seção na home).
-- **Sugestão sazonal automática**: `layer.domain.seasons.current_season()`
-  já existe. Falta plugar o resultado como filtro de `season` em
-  `suggest_from_scratch()` e expor isso na UI (ex.: "hoje está frio, sugiro
-  X" na home).
+- **Alertas de reposição de estoque** — implementado.
+  `fragrance_service.low_stock_fragrances()` alimenta a seção "Estoque
+  baixo" da home (`layer/ui/app.py`) e a coluna "Estoque" da tabela em
+  `layer/ui/pages/1_colecao.py`. Threshold fixo em 15ml em ambos os
+  lugares — se isso virar configurável, centralize o valor em vez de
+  duplicar o número.
+- **Sugestão sazonal automática** — implementado.
+  `layer.domain.compatibility.suggest_for_season()` prioriza pares cuja
+  `best_season` bate com `current_season()`, com fallback pro ranking geral
+  se nada bater. Exposto via `combo_service.get_seasonal_suggestions()` na
+  home, reusando `layer.ui.components.render_suggestion_card` (o mesmo
+  componente da página Sugestor — não duplique a renderização de card de
+  sugestão, estenda `components.py`).
 - **Integração com API da Anthropic** para gerar descrições mais literárias
   no lugar do `rationale` baseado em regras: mencionada no README como
-  possibilidade futura, sem código ainda. É a única das três que rompe a
+  possibilidade futura, sem código ainda. É a única pendência que rompe a
   promessa "local-first, sem API paga" — não implementar sem alinhar antes
   se isso ainda é o que o produto quer.
 
@@ -112,7 +118,9 @@ uma decisão de produto, não só técnica (ver "O que não fazer" abaixo).
   `fragrance_service`, `combo_service`, `journal_service`,
   `importexport_service`).
 - Páginas e navegação: `layer/ui/app.py` (entrypoint) e `layer/ui/pages/`
-  (uma página por número de ordem no menu lateral).
+  (uma página por número de ordem no menu lateral). Componentes Streamlit
+  reusados por mais de uma página (ex.: card de sugestão) vivem em
+  `layer/ui/components.py`.
 - Schemas de validação/serialização: `layer/schemas.py`. Modelos de banco:
   `layer/models.py`.
 

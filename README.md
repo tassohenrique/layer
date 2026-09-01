@@ -131,14 +131,24 @@ Cadastro é manual ou via CSV/JSON (página **Coleção**). O app **não faz
 scraping** de sites como o Fragrantica — isso violaria os termos de uso
 deles.
 
+## Alertas de estoque e sugestão sazonal
+
+Na home, duas seções automáticas:
+
+- **Estoque baixo** — lista fragrâncias possuídas com 15ml ou menos
+  restantes (`fragrance_service.low_stock_fragrances()`); a página
+  **Coleção** também sinaliza isso por linha, na coluna "Estoque".
+- **Sugestão para a estação atual** — usa
+  `layer.domain.seasons.current_season()` e o motor de compatibilidade
+  (`suggest_for_season`) para propor as melhores combinações da sua
+  coleção para a estação de hoje, priorizando pares cuja estação
+  recomendada bate com a atual.
+
 ## Próximos passos (fase 2, não implementado ainda)
 
-- Alertas de reposição de estoque (`ml_remaining` baixo) — a função
-  `fragrance_service.low_stock_fragrances()` já existe como base para isso.
-- Sugestões sazonais automáticas ("hoje está frio, sugiro X") — a função
-  `layer.domain.seasons.current_season()` já existe como base.
 - Integração opcional com a API da Anthropic para gerar descrições mais
-  literárias das combinações.
+  literárias das combinações — a única pendência que rompe a proposta
+  "local-first, sem API paga" do app, por isso fica por último.
 
 Mais detalhes de arquitetura, convenções e decisões já tomadas em
 [CLAUDE.md](./CLAUDE.md).

@@ -97,6 +97,19 @@ class TestComboService:
         assert len(suggestions) == 1
         assert suggestions[0].compatibility_score >= 80
 
+    def test_get_seasonal_suggestions(self, session: Session) -> None:
+        fragrance_service.create_fragrance(
+            session, _fragrance_payload(name="Inverno A", primary_family="amadeirado", best_season=["inverno"])
+        )
+        fragrance_service.create_fragrance(
+            session, _fragrance_payload(name="Inverno B", primary_family="ambar", best_season=["inverno"])
+        )
+
+        suggestions = combo_service.get_seasonal_suggestions(session, season="inverno")
+
+        assert len(suggestions) == 1
+        assert suggestions[0].compatibility_score >= 80
+
     def test_save_combo_persists(self, session: Session) -> None:
         a = fragrance_service.create_fragrance(
             session, _fragrance_payload(name="A", primary_family="amadeirado", intensity=3)
