@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Layer — Perfumes{% endblock %}
+{% block content %}
+<h1>Perfumes</h1>
+<div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem;">
+    {% for perfume in perfumes %}
+        <a href="{{ perfume.get_absolute_url }}" style="text-decoration:none; color:inherit;">
+            <div style="border:1px solid var(--border); border-radius:8px; padding:1rem;">
+                <strong>{{ perfume.name }}</strong> <span style="color:var(--muted);">— {{ perfume.brand.name }}</span>
+                <div style="color:var(--muted); font-size:0.9rem;">
+                    {% if perfume.avg_rating %}
+                        ★ {{ perfume.avg_rating|floatformat:1 }} ({{ perfume.review_count }} review{{ perfume.review_count|pluralize }})
+                    {% else %}
+                        Sem reviews ainda
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+    {% empty %}
+        <p>Nenhum perfume cadastrado ainda. Rode <code>python manage.py seed_perfumes</code>.</p>
+    {% endfor %}
+</div>
+{% endblock %}

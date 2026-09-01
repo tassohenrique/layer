@@ -1,49 +1,48 @@
 # Layer 🌸
 
-![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?logo=streamlit&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.x-D71F00)
-![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)
-![Pytest](https://img.shields.io/badge/tested%20with-pytest-0A9EDC?logo=pytest&logoColor=white)
-![Local-first](https://img.shields.io/badge/local--first-sem%20nuvem-success)
+![Django](https://img.shields.io/badge/Django-6.x-092E20?logo=django&logoColor=white)
+![Postgres](https://img.shields.io/badge/Postgres-DATABASE__URL-4169E1?logo=postgresql&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-fallback%20local-003B57?logo=sqlite&logoColor=white)
+![No ads](https://img.shields.io/badge/sem%20an%C3%BAncios-por%20princ%C3%ADpio-success)
 
-App local-first para catalogar uma coleção de perfumes de nicho, receber
-sugestões de **layering** (combinação de fragrâncias) baseadas em regras
-reais de perfumaria, manter um diário de uso e visualizar a coleção.
+Plataforma de reviews de perfumes — pirâmide olfativa, accords, ficha
+técnica e nota média da comunidade em cada página de perfume, com
+usuários logados escrevendo reviews. Nos moldes do Fragrantica, mas com
+um compromisso explícito: **sem anúncios e sem bloqueio de navegação**.
 
-## Screenshot
-
-![Sugestor de Layering — sugestão gerada para Interlude Man](docs/screenshot.png)
+> Até a versão anterior, o Layer era um app pessoal (Streamlit) pra
+> catalogar sua própria coleção e sugerir combinações de layering. Esse
+> código foi preservado em [`legacy/`](./legacy) e pode virar a base do
+> recomendador de perfumes semelhantes mais adiante — ver
+> [CLAUDE.md](./CLAUDE.md) pro histórico completo do pivot.
 
 ## Stack
 
-- Python 3.11+
-- SQLite via SQLAlchemy 2.x (arquivo local `layer.db`)
-- Streamlit (interface)
-- Pydantic v2 (validação)
-- Pandas (import/export CSV)
-- Plotly (gráficos)
-- Pytest (testes da camada de regras)
+- Django 6.x + Postgres (via `DATABASE_URL`; cai pra SQLite local se a
+  variável não estiver definida — não precisa instalar Postgres pra
+  rodar localmente)
+- Pillow (upload de avatar de perfil)
+- `pytest-django` para testes
 
-Tudo roda localmente, sem dependência de nuvem ou API paga.
-
-## Instalação
+## Rodando localmente
 
 ```bash
+python -m venv .venv
+.venv/Scripts/activate            # Windows; no Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
+
+cp .env.example .env              # ajuste se for usar Postgres (DATABASE_URL)
+
+python manage.py migrate
+python manage.py seed_perfumes    # popula o catálogo com ~20 perfumes de nicho reais
+python manage.py createsuperuser  # acesso ao /admin/, pra cadastrar/editar perfumes
+
+python manage.py runserver
 ```
 
-## Rodando
-
-```bash
-# 1. (opcional, mas recomendado) popular o banco com ~20 perfumes de nicho reais
-python seed_data.py
-
-# 2. subir o app
-streamlit run layer/ui/app.py
-```
-
-O banco é criado automaticamente (`layer.db`) na primeira execução.
+Abra `http://localhost:8000`. Cadastro de perfumes (marca, notas,
+accords) é feito pelo `/admin/` no MVP — ainda não tem uma tela própria
+de CRUD de catálogo.
 
 ## Rodando os testes
 
@@ -51,104 +50,22 @@ O banco é criado automaticamente (`layer.db`) na primeira execução.
 pytest
 ```
 
-Os testes cobrem principalmente `layer/domain/compatibility.py` (a lógica
-de negócio) e a camada de serviços — CRUD é testado com um SQLite em
-memória, sem tocar no `layer.db` real.
+Cobre models (`catalog`), a view da página de perfume, criação/edição de
+review e o comando `seed_perfumes` (idempotente — pode rodar de novo sem
+duplicar). Os testes do app antigo ficaram em `legacy/tests/` e são
+ignorados pelo `pytest.ini` atual.
 
-## Arquitetura
+## Telas (Fase 1)
 
-```
-layer/
-  models.py            # SQLAlchemy models
-  schemas.py            # Pydantic schemas (validação/serialização)
-  db.py                  # engine, sessão, init_db()
-  domain/
-    families.py         # enum de famílias olfativas + matriz de compatibilidade
-    compatibility.py    # motor de regras de layering
-    seasons.py           # regras de sazonalidade (hemisfério sul)
-  services/
-    fragrance_service.py
-    combo_service.py
-    journal_service.py
-    importexport_service.py
-  ui/
-    app.py               # entrypoint do Streamlit
-    pages/
-      1_colecao.py
-      2_sugestor.py
-      3_diario.py
-      4_visualizacoes.py
-tests/
-  test_compatibility.py
-  test_services.py
-seed_data.py
-```
+- `/` — lista de perfumes cadastrados
+- `/perfumes/<slug>/` — pirâmide olfativa, accords, ficha técnica, nota
+  média + reviews, formulário de review pra quem está logado
+- `/accounts/signup/`, `/accounts/login/`, `/accounts/logout/`
+- `/accounts/profile/` — editar nome de exibição e avatar
+- `/admin/` — cadastro de perfumes/marcas/accords/notas
 
-A camada de domínio (`layer/domain/`) é pura — não sabe nada sobre banco de
-dados ou Streamlit. Ela opera sobre schemas Pydantic (`FragranceRead`) e é
-por isso testável sem precisar de infraestrutura. Os serviços (`layer/services/`)
-fazem a ponte entre o banco (SQLAlchemy) e o domínio. A UI (`layer/ui/`) só
-chama serviços, nunca acessa o banco ou o domínio diretamente.
+## Roadmap
 
-## Como funciona o motor de recomendação
-
-O coração do app é `layer/domain/compatibility.py`. Para cada par de
-fragrâncias, o motor:
-
-1. **Consulta a matriz de compatibilidade entre famílias olfativas**
-   (`layer/domain/families.py`), codificada como dados (não texto solto),
-   para poder ser testada. A matriz cobre 4 categorias de perfumaria:
-   - **Reforço** (score alto): pares que ecoam, tipo amadeirado + âmbar.
-   - **Suaviza**: pares que arredondam, tipo floral + almíscar limpo.
-   - **Contraste elegante**: a categoria mais valorizada em nicho — tipo
-     gourmand doce + couro/tabaco, ou vetiver seco + baunilha/âmbar.
-   - **Arriscado**: pares experimentais (score baixo) que o app **sinaliza,
-     mas nunca bloqueia** — por exemplo, aquático + gourmand pesado, ou
-     dois perfumes muito intensos da mesma família competindo por
-     protagonismo.
-2. **Ajusta o score** por diferença de intensidade declarada (choque de
-   protagonismo quando duas fragrâncias fortes e parecidas em intensidade
-   disputam espaço), sobreposição de estação recomendada, e concentração
-   (dois Extraits fortes pedem mais cautela).
-3. **Decide o papel líder/modificador**: a fragrância com maior
-   intensidade/concentração/presença de notas de fundo vira a "base" —
-   aplicada na pele, 2-3 borrifadas. A outra vira o "modificador" —
-   aplicada por cima ou na roupa, 1-2 borrifadas.
-4. **Gera uma explicação em português** (`rationale`) e instruções de
-   aplicação, para cada sugestão.
-
-Duas funções principais expõem esse motor:
-
-- `suggest_combos(fragrance_id, collection)` — dado um perfume da sua
-  coleção, retorna os melhores parceiros ranqueados por score.
-- `suggest_from_scratch(collection, intention, occasion, season)` — varre
-  a coleção inteira e sugere os melhores pares para um objetivo
-  (`ecoar`, `suavizar`, `contrastar`, `clarear`, `escurecer`).
-
-## Import/export
-
-Cadastro é manual ou via CSV/JSON (página **Coleção**). O app **não faz
-scraping** de sites como o Fragrantica — isso violaria os termos de uso
-deles.
-
-## Alertas de estoque e sugestão sazonal
-
-Na home, duas seções automáticas:
-
-- **Estoque baixo** — lista fragrâncias possuídas com 15ml ou menos
-  restantes (`fragrance_service.low_stock_fragrances()`); a página
-  **Coleção** também sinaliza isso por linha, na coluna "Estoque".
-- **Sugestão para a estação atual** — usa
-  `layer.domain.seasons.current_season()` e o motor de compatibilidade
-  (`suggest_for_season`) para propor as melhores combinações da sua
-  coleção para a estação de hoje, priorizando pares cuja estação
-  recomendada bate com a atual.
-
-## Próximos passos (fase 2, não implementado ainda)
-
-- Integração opcional com a API da Anthropic para gerar descrições mais
-  literárias das combinações — a única pendência que rompe a proposta
-  "local-first, sem API paga" do app, por isso fica por último.
-
-Mais detalhes de arquitetura, convenções e decisões já tomadas em
-[CLAUDE.md](./CLAUDE.md).
+Fases 2 (busca, favoritos, curtidas em review, edição com histórico) e 3
+(recomendador, "em alta", comparador, diretório de marcas, editorial)
+estão detalhadas em [CLAUDE.md](./CLAUDE.md).

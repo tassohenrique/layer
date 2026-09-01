@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Entrar — Layer{% endblock %}
+{% block content %}
+<h1>Entrar</h1>
+<form method="post" style="max-width:360px;">
+    {% csrf_token %}
+    {% for field in form %}
+        <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<small style="color:var(--accent);">{{ field.errors|striptags }}</small>{% endif %}
+        </div>
+    {% endfor %}
+    <button type="submit">Entrar</button>
+</form>
+<p style="margin-top:1rem;">Ainda não tem conta? <a href="{% url 'accounts:signup' %}">Criar conta</a></p>
+{% endblock %}

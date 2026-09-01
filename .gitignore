@@ -3,6 +3,14 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-layer.db
 *.egg-info/
-.streamlit/secrets.toml
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+.env
+
+# legado (Streamlit) — dados pessoais, não versionar
+legacy/layer.db
+legacy/.streamlit/secrets.toml
