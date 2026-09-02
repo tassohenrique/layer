@@ -4,6 +4,7 @@ from django.core.management import call_command
 from django.urls import reverse
 
 from catalog.models import Accord, Brand, Note, Perfume
+from favorites.models import Favorite
 from reviews.models import Review
 
 pytestmark = pytest.mark.django_db
@@ -67,6 +68,16 @@ class TestPerfumeViews:
         assert response.status_code == 200
         assert b"Bergamota" in response.content
         assert "Amadeirado".encode() in response.content
+
+    def test_detalhe_mostra_botao_de_coleção_quando_ja_possui(self, client) -> None:
+        perfume = make_perfume(name="Layton")
+        user = User.objects.create_user("dono", password="senha123")
+        Favorite.objects.create(user=user, perfume=perfume, owned=True)
+        client.force_login(user)
+
+        response = client.get(perfume.get_absolute_url())
+
+        assert "📦 Na coleção".encode() in response.content
 
 
 class TestPerfumeSearch:
