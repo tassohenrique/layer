@@ -69,6 +69,67 @@ class TestPerfumeViews:
         assert "Amadeirado".encode() in response.content
 
 
+class TestPerfumeSearch:
+    def test_busca_por_nome(self, client) -> None:
+        make_perfume(name="Aventus", brand=Brand.objects.create(name="Creed"))
+        make_perfume(name="Santal 33", brand=Brand.objects.create(name="Le Labo"))
+
+        response = client.get(reverse("catalog:perfume_list"), {"q": "aventus"})
+
+        assert b"Aventus" in response.content
+        assert b"Santal 33" not in response.content
+
+    def test_busca_por_marca(self, client) -> None:
+        make_perfume(name="Aventus", brand=Brand.objects.create(name="Creed"))
+        make_perfume(name="Santal 33", brand=Brand.objects.create(name="Le Labo"))
+
+        response = client.get(reverse("catalog:perfume_list"), {"q": "le labo"})
+
+        assert b"Santal 33" in response.content
+        assert b"Aventus" not in response.content
+
+    def test_busca_por_nota_olfativa(self, client) -> None:
+        com_baunilha = make_perfume(name="Tobacco Vanille")
+        com_baunilha.notes_base.add(Note.objects.create(name="Baunilha"))
+        sem_baunilha = make_perfume(name="Percival", brand=Brand.objects.create(name="Outra Marca"))
+        sem_baunilha.notes_top.add(Note.objects.create(name="Bergamota"))
+
+        response = client.get(reverse("catalog:perfume_list"), {"q": "baunilha"})
+
+        assert b"Tobacco Vanille" in response.content
+        assert b"Percival" not in response.content
+
+    def test_filtro_por_accord(self, client) -> None:
+        oud = Accord.objects.create(key="oud", label_pt="Oud")
+        floral = Accord.objects.create(key="floral", label_pt="Floral")
+        com_oud = make_perfume(name="Black Aoud")
+        com_oud.accords.add(oud)
+        so_floral = make_perfume(name="Ani", brand=Brand.objects.create(name="Nishane"))
+        so_floral.accords.add(floral)
+
+        response = client.get(reverse("catalog:perfume_list"), {"accord": "oud"})
+
+        assert b"Black Aoud" in response.content
+        assert b"Ani" not in response.content
+
+    def test_busca_sem_resultado_nao_quebra(self, client) -> None:
+        make_perfume(name="Aventus")
+
+        response = client.get(reverse("catalog:perfume_list"), {"q": "inexistente-xyz"})
+
+        assert response.status_code == 200
+        assert b"Nenhum perfume encontrado" in response.content
+
+    def test_perfume_nao_duplica_quando_tem_varias_notas_batendo(self, client) -> None:
+        # Filtrar por M2M pode duplicar linhas sem o distinct() na view.
+        perfume = make_perfume(name="Layton")
+        perfume.notes_top.add(Note.objects.create(name="Maçã"), Note.objects.create(name="Bergamota"))
+
+        response = client.get(reverse("catalog:perfume_list"), {"q": "a"})
+
+        assert response.content.count(b"Layton") == 1
+
+
 class TestSeedCommand:
     def test_seed_e_idempotente(self) -> None:
         call_command("seed_perfumes")
