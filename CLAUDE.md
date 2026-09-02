@@ -148,12 +148,23 @@ Profile       — user (OneToOne), display_name, avatar
   pessoa ao longo do tempo. Na página do perfume, a review mostra data +
   texto originais, seguidos de cada atualização com sua própria data e
   nota, mais recente por último.
+- **Recomendador simples** (`catalog/recommendations.py::similar_perfumes`)
+  — seção "Você também pode gostar de" na página do perfume, com até 5
+  sugestões. Pontua por sobreposição de accords (peso 3) e notas (peso 1)
+  com o perfume atual, sem ML. Calculado em Python sobre querysets
+  pré-carregados, não com `annotate`+`Count` em várias relações M2M na
+  mesma query (o Django infla contagem ao combinar mais de uma anotação
+  M2M assim). **Não reaproveita**
+  `legacy/layer/domain/compatibility.py` — aquele motor resolve layering
+  (como duas fragrâncias combinam quando usadas juntas, com papel
+  líder/modificador), um problema diferente de similaridade de catálogo.
+  Escala em O(n) sobre todo o catálogo por view — aceitável com dezenas
+  de perfumes; se o catálogo crescer muito, vira candidato a cache ou
+  query mais esperta.
 
 ## Roadmap (não implementado ainda)
 
 ### Fase 3 — diferenciais avançados
-- Recomendador simples por accords/notas em comum (sem ML) — candidato
-  natural a reaproveitar `legacy/layer/domain/compatibility.py`
 - "Em alta": ranking por atividade recente (reviews/favoritos)
 - Comparador de perfumes lado a lado
 - Diretório de marcas (`Brand` já existe, falta a página de navegação)

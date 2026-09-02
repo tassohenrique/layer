@@ -79,6 +79,18 @@ class TestPerfumeViews:
 
         assert "📦 Na coleção".encode() in response.content
 
+    def test_detalhe_mostra_perfumes_parecidos(self, client) -> None:
+        accord = Accord.objects.create(key="oud", label_pt="Oud")
+        perfume = make_perfume(name="Alvo", brand=Brand.objects.create(name="Marca A"))
+        perfume.accords.add(accord)
+        parecido = make_perfume(name="Parecido", brand=Brand.objects.create(name="Marca B"))
+        parecido.accords.add(accord)
+
+        response = client.get(perfume.get_absolute_url())
+
+        assert b"Voc\xc3\xaa tamb\xc3\xa9m pode gostar de" in response.content
+        assert b"Parecido" in response.content
+
 
 class TestPerfumeSearch:
     def test_busca_por_nome(self, client) -> None:

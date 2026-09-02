@@ -2,6 +2,7 @@ from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Accord, Perfume
+from catalog.recommendations import similar_perfumes
 from favorites.models import Favorite
 from reviews.forms import ReviewForm, ReviewUpdateForm
 from reviews.models import ReviewLike
@@ -78,5 +79,6 @@ def perfume_detail(request, slug):
         "favorite_count": perfume.favorited_by.count(),
         "owned_count": perfume.favorited_by.filter(owned=True).count(),
         "liked_review_ids": liked_review_ids,
+        "similar_perfumes": similar_perfumes(perfume),
     }
     return render(request, "catalog/perfume_detail.html", context)
