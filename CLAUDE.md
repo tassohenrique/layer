@@ -109,10 +109,17 @@ Profile       — user (OneToOne), display_name, avatar
 - Migrations sempre commitadas junto com a mudança de model que as gerou
   (não rodar `makemigrations` num commit separado).
 
+## Já implementado além do MVP original
+
+- **Busca e filtro** (`catalog/views.py::perfume_list`) — busca livre por
+  nome/marca/nota (`?q=`) via `Q` OR + `icontains` nos três campos de
+  notas, e filtro por accord (`?accord=<key>`). Os dois usam `.distinct()`
+  porque filtrar por M2M pode duplicar linhas. Estado vazio diferencia
+  "nada cadastrado" de "busca sem resultado".
+
 ## Roadmap (não implementado ainda)
 
 ### Fase 2 — engajamento e descoberta
-- Busca por notas olfativas e por accords
 - Favoritar perfumes (wishlist)
 - Coleção pessoal ("perfumes que eu tenho") — possível ponto de reconexão
   com o conceito do app antigo, mas agora como feature social, não como

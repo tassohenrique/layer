@@ -2,6 +2,25 @@
 {% block title %}Layer — Perfumes{% endblock %}
 {% block content %}
 <h1>Perfumes</h1>
+
+<form method="get" style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+    <input
+        type="text" name="q" value="{{ query }}"
+        placeholder="Buscar por nome, marca ou nota (ex.: baunilha)"
+        style="flex:1; min-width:220px;"
+    >
+    <select name="accord">
+        <option value="">Todos os acordes</option>
+        {% for accord in accords %}
+            <option value="{{ accord.key }}" {% if accord.key == selected_accord %}selected{% endif %}>{{ accord.label_pt }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Buscar</button>
+    {% if has_filters %}
+        <a href="{% url 'catalog:perfume_list' %}" style="align-self:center; color:var(--muted);">Limpar</a>
+    {% endif %}
+</form>
+
 <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem;">
     {% for perfume in perfumes %}
         <a href="{{ perfume.get_absolute_url }}" style="text-decoration:none; color:inherit;">
@@ -24,7 +43,11 @@
             </div>
         </a>
     {% empty %}
-        <p>Nenhum perfume cadastrado ainda. Rode <code>python manage.py seed_perfumes</code>.</p>
+        {% if has_filters %}
+            <p>Nenhum perfume encontrado pra essa busca.</p>
+        {% else %}
+            <p>Nenhum perfume cadastrado ainda. Rode <code>python manage.py seed_perfumes</code>.</p>
+        {% endif %}
     {% endfor %}
 </div>
 {% endblock %}
