@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 
 from catalog.models import Brand, Perfume
-from reviews.models import Review, ReviewLike
+from reviews.models import Review, ReviewLike, ReviewUpdate
 
 pytestmark = pytest.mark.django_db
 
@@ -38,18 +38,85 @@ class TestCreateReview:
         assert review.rating == 4
         assert review.text == "Gostei bastante"
 
-    def test_segunda_review_do_mesmo_usuario_atualiza_em_vez_de_duplicar(self, client, perfume) -> None:
+    def test_segunda_tentativa_de_criar_review_nao_sobrescreve_a_original(self, client, perfume) -> None:
+        """A review original é imutável — reenviar create_review não faz nada (usa add_review_update pra isso)."""
         user = User.objects.create_user("resenhista", password="senha123")
         client.force_login(user)
         url = reverse("reviews:create_review", kwargs={"slug": perfume.slug})
 
         client.post(url, {"rating": 2, "text": "Não curti no início"})
-        client.post(url, {"rating": 5, "text": "Melhorou muito com o tempo"})
+        client.post(url, {"rating": 5, "text": "Tentando sobrescrever"})
 
         assert Review.objects.filter(perfume=perfume, user=user).count() == 1
         review = Review.objects.get(perfume=perfume, user=user)
-        assert review.rating == 5
-        assert review.text == "Melhorou muito com o tempo"
+        assert review.rating == 2
+        assert review.text == "Não curti no início"
+
+
+class TestAddReviewUpdate:
+    @pytest.fixture()
+    def review(self, perfume) -> Review:
+        autor = User.objects.create_user("autor", password="senha123")
+        return Review.objects.create(perfume=perfume, user=autor, rating=2, text="Não curti no início")
+
+    def test_anonimo_e_redirecionado_pro_login(self, client, review) -> None:
+        response = client.post(
+            reverse("reviews:add_review_update", kwargs={"slug": review.perfume.slug}),
+            {"rating": 5, "text": "Melhorou muito"},
+        )
+
+        assert response.status_code == 302
+        assert "login" in response.url
+        assert ReviewUpdate.objects.count() == 0
+
+    def test_usuario_sem_review_recebe_404(self, client, perfume) -> None:
+        user = User.objects.create_user("sem_review", password="senha123")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("reviews:add_review_update", kwargs={"slug": perfume.slug}),
+            {"rating": 5, "text": "Não tenho review ainda"},
+        )
+
+        assert response.status_code == 404
+
+    def test_autor_adiciona_atualizacao_preservando_a_original(self, client, review) -> None:
+        client.force_login(review.user)
+
+        client.post(
+            reverse("reviews:add_review_update", kwargs={"slug": review.perfume.slug}),
+            {"rating": 5, "text": "Melhorou muito com o tempo de uso"},
+        )
+
+        review.refresh_from_db()
+        assert review.text == "Não curti no início"  # original intacto
+        assert review.rating == 5  # rating sincronizado com a atualização mais recente
+        update = ReviewUpdate.objects.get(review=review)
+        assert update.rating == 5
+        assert update.text == "Melhorou muito com o tempo de uso"
+
+    def test_media_da_comunidade_usa_a_nota_mais_recente(self, client, review) -> None:
+        client.force_login(review.user)
+
+        client.post(
+            reverse("reviews:add_review_update", kwargs={"slug": review.perfume.slug}),
+            {"rating": 5, "text": "Melhorou"},
+        )
+
+        stats = review.perfume.rating_stats
+        assert stats["average"] == 5
+        assert stats["count"] == 1
+
+    def test_varias_atualizacoes_ficam_no_historico(self, client, review) -> None:
+        client.force_login(review.user)
+        url = reverse("reviews:add_review_update", kwargs={"slug": review.perfume.slug})
+
+        client.post(url, {"rating": 3, "text": "Primeira atualização"})
+        client.post(url, {"rating": 4, "text": "Segunda atualização"})
+
+        assert ReviewUpdate.objects.filter(review=review).count() == 2
+        review.refresh_from_db()
+        assert review.rating == 4
 
 
 class TestToggleLike:
@@ -99,3 +166,16 @@ class TestToggleLike:
         response = client.get(review.perfume.get_absolute_url())
 
         assert "👍 2".encode() in response.content
+
+
+class TestReviewHistoryOnPerfumePage:
+    def test_original_e_atualizacao_aparecem_na_pagina(self, client, perfume) -> None:
+        autor = User.objects.create_user("autor", password="senha123")
+        review = Review.objects.create(perfume=perfume, user=autor, rating=2, text="Não curti no início")
+        ReviewUpdate.objects.create(review=review, rating=5, text="Melhorou muito com o tempo")
+
+        response = client.get(perfume.get_absolute_url())
+
+        assert b"N\xc3\xa3o curti no in\xc3\xadcio" in response.content
+        assert "Melhorou muito com o tempo".encode() in response.content
+        assert "Atualização em".encode("utf-8") in response.content
