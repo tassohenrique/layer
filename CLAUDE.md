@@ -135,12 +135,21 @@ Profile       — user (OneToOne), display_name, avatar
   Fragrantica). `catalog/views.py::perfume_detail` anota `like_count` via
   `Count("likes")` e monta um `set` dos ids de review que o usuário logado
   já curtiu, pra não fazer 1 query por review no template.
+- **Atualização de review com histórico** (`reviews/models.py::ReviewUpdate`)
+  — a review original (`Review.text`/`Review.rating` no momento da
+  criação) nunca é sobrescrita: `reviews:create_review` só cria a
+  primeira vez (reenviar não faz nada, é ignorado). Atualizações depois
+  de mais tempo de uso passam por `reviews:add_review_update`, que cria
+  um `ReviewUpdate` (nota + texto + data) SEM tocar na review original, e
+  sincroniza `Review.rating` com a nota mais recente. Esse sync existe
+  porque `Perfume.rating_stats` lê `Review.rating` direto num
+  `aggregate()` — a média da comunidade deve refletir a opinião atual de
+  cada pessoa (a mais recente), não a média das próprias notas de uma
+  pessoa ao longo do tempo. Na página do perfume, a review mostra data +
+  texto originais, seguidos de cada atualização com sua própria data e
+  nota, mais recente por último.
 
 ## Roadmap (não implementado ainda)
-
-### Fase 2 — engajamento e descoberta
-- Editar review após um tempo de uso ("atualização após 3 meses"),
-  mantendo o histórico da review original
 
 ### Fase 3 — diferenciais avançados
 - Recomendador simples por accords/notas em comum (sem ML) — candidato

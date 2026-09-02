@@ -69,19 +69,42 @@
 
 <h2>Reviews</h2>
 {% if user.is_authenticated %}
-    <form method="post" action="{% url 'reviews:create_review' slug=perfume.slug %}" style="border:1px solid var(--border); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
-        {% csrf_token %}
-        <p style="margin-top:0;">{% if user_review %}Editar sua review{% else %}Escreva sua review{% endif %}</p>
-        <div class="field">
-            <label for="{{ form.rating.id_for_label }}">Nota (1–5)</label>
-            {{ form.rating }}
+    {% if user_review %}
+        <div style="border:1px solid var(--border); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+            <p style="margin-top:0; color:var(--muted); font-size:0.85rem;">
+                Sua review, de {{ user_review.created_at|date:"d/m/Y" }} — ★ {{ user_review.rating }}/5 no momento
+            </p>
+            <p>{{ user_review.text }}</p>
+            <hr style="border:none; border-top:1px solid var(--border);">
+            <p style="margin-bottom:0.5rem;">Como está depois de mais tempo de uso? Adicione uma atualização:</p>
+            <form method="post" action="{% url 'reviews:add_review_update' slug=perfume.slug %}">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="{{ update_form.rating.id_for_label }}">Nota agora (1–5)</label>
+                    {{ update_form.rating }}
+                </div>
+                <div class="field">
+                    <label for="{{ update_form.text.id_for_label }}">Atualização</label>
+                    {{ update_form.text }}
+                </div>
+                <button type="submit">Publicar atualização</button>
+            </form>
         </div>
-        <div class="field">
-            <label for="{{ form.text.id_for_label }}">Comentário</label>
-            {{ form.text }}
-        </div>
-        <button type="submit">{% if user_review %}Salvar alteração{% else %}Publicar review{% endif %}</button>
-    </form>
+    {% else %}
+        <form method="post" action="{% url 'reviews:create_review' slug=perfume.slug %}" style="border:1px solid var(--border); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+            {% csrf_token %}
+            <p style="margin-top:0;">Escreva sua review</p>
+            <div class="field">
+                <label for="{{ form.rating.id_for_label }}">Nota (1–5)</label>
+                {{ form.rating }}
+            </div>
+            <div class="field">
+                <label for="{{ form.text.id_for_label }}">Comentário</label>
+                {{ form.text }}
+            </div>
+            <button type="submit">Publicar review</button>
+        </form>
+    {% endif %}
 {% else %}
     <p><a href="{% url 'accounts:login' %}?next={{ request.path }}">Entre</a> pra deixar sua review.</p>
 {% endif %}
@@ -89,8 +112,15 @@
 {% for review in reviews %}
     <div style="border-bottom:1px solid var(--border); padding:0.85rem 0;">
         <strong>{{ review.user.profile.name }}</strong>
-        <span style="color:var(--muted);">★ {{ review.rating }}/5 · {{ review.created_at|date:"d/m/Y" }}</span>
+        <span style="color:var(--muted);">★ {{ review.rating }}/5 no momento</span>
+        <p style="margin:0.35rem 0 0; color:var(--muted); font-size:0.8rem;">{{ review.created_at|date:"d/m/Y" }}</p>
         <p style="margin:0.35rem 0 0;">{{ review.text }}</p>
+        {% for update in review.updates.all %}
+            <div style="margin:0.6rem 0 0 1rem; padding-left:0.75rem; border-left:2px solid var(--border);">
+                <span style="color:var(--muted); font-size:0.8rem;">Atualização em {{ update.created_at|date:"d/m/Y" }} · ★ {{ update.rating }}/5</span>
+                <p style="margin:0.25rem 0 0;">{{ update.text }}</p>
+            </div>
+        {% endfor %}
         {% if user.is_authenticated %}
             <form method="post" action="{% url 'reviews:toggle_like' review_id=review.id %}" style="margin-top:0.4rem;">
                 {% csrf_token %}

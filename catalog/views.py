@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Accord, Perfume
 from favorites.models import Favorite
-from reviews.forms import ReviewForm
+from reviews.forms import ReviewForm, ReviewUpdateForm
 from reviews.models import ReviewLike
 
 
@@ -44,8 +44,10 @@ def perfume_detail(request, slug):
         ),
         slug=slug,
     )
-    perfume_reviews = perfume.reviews.select_related("user", "user__profile").annotate(
-        like_count=Count("likes")
+    perfume_reviews = (
+        perfume.reviews.select_related("user", "user__profile")
+        .prefetch_related("updates")
+        .annotate(like_count=Count("likes"))
     )
     stats = perfume.rating_stats
 
@@ -68,7 +70,8 @@ def perfume_detail(request, slug):
         "perfume": perfume,
         "reviews": perfume_reviews,
         "stats": stats,
-        "form": ReviewForm(instance=user_review),
+        "form": ReviewForm(),
+        "update_form": ReviewUpdateForm(),
         "user_review": user_review,
         "is_favorited": is_favorited,
         "is_owned": is_owned,
