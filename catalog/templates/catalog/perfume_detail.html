@@ -11,6 +11,19 @@
     <div>
         <h1 style="margin-bottom:0.25rem;">{{ perfume.name }}</h1>
         <p style="color:var(--muted); margin-top:0;">{{ perfume.brand.name }}{% if perfume.launch_year %} · {{ perfume.launch_year }}{% endif %}</p>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'favorites:toggle_favorite' slug=perfume.slug %}">
+                {% csrf_token %}
+                <button type="submit" style="{% if is_favorited %}background:var(--ink);{% else %}background:transparent; color:var(--ink); border:1px solid var(--border);{% endif %}">
+                    {% if is_favorited %}♥ Favoritado{% else %}♡ Favoritar{% endif %}
+                </button>
+            </form>
+        {% endif %}
+        {% if favorite_count == 1 %}
+            <p style="color:var(--muted); font-size:0.85rem; margin-top:0.4rem;">♥ 1 pessoa favoritou esse perfume</p>
+        {% elif favorite_count %}
+            <p style="color:var(--muted); font-size:0.85rem; margin-top:0.4rem;">♥ {{ favorite_count }} pessoas favoritaram esse perfume</p>
+        {% endif %}
     </div>
 </div>
 
