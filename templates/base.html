@@ -22,6 +22,12 @@
         header a.brand { font-size: 1.25rem; font-weight: 700; color: var(--ink); text-decoration: none; }
         nav a { margin-left: 1rem; color: var(--muted); text-decoration: none; font-size: 0.9rem; }
         nav a:hover { color: var(--accent); }
+        nav form { display: inline; margin: 0; }
+        nav button.link {
+            background: none; border: none; padding: 0; margin-left: 1rem;
+            color: var(--muted); font-size: 0.9rem; font-family: inherit; cursor: pointer;
+        }
+        nav button.link:hover { color: var(--accent); }
         main { max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem; }
         .messages { list-style: none; padding: 0; margin: 0 0 1.5rem; }
         .messages li { background: #f3ede4; padding: 0.6rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; }
@@ -47,7 +53,10 @@
         {% if user.is_authenticated %}
             <a href="{% url 'favorites:favorite_list' %}">Minha lista</a>
             <a href="{% url 'accounts:profile' %}">{{ user.profile.name }}</a>
-            <a href="{% url 'accounts:logout' %}">Sair</a>
+            <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="link">Sair</button>
+            </form>
         {% else %}
             <a href="{% url 'accounts:login' %}">Entrar</a>
             <a href="{% url 'accounts:signup' %}">Criar conta</a>
