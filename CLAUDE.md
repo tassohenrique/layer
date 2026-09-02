@@ -116,6 +116,13 @@ Profile       — user (OneToOne), display_name, avatar
   notas, e filtro por accord (`?accord=<key>`). Os dois usam `.distinct()`
   porque filtrar por M2M pode duplicar linhas. Estado vazio diferencia
   "nada cadastrado" de "busca sem resultado".
+- **Curtir reviews** (`reviews/models.py::ReviewLike`,
+  `unique_together (review, user)`) — botão de curtir/descurtir (toggle
+  via POST) em cada review na página do perfume, com contagem. O autor
+  pode curtir a própria review (sem regra especial pra isso, igual ao
+  Fragrantica). `catalog/views.py::perfume_detail` anota `like_count` via
+  `Count("likes")` e monta um `set` dos ids de review que o usuário logado
+  já curtiu, pra não fazer 1 query por review no template.
 
 ## Roadmap (não implementado ainda)
 
@@ -124,7 +131,6 @@ Profile       — user (OneToOne), display_name, avatar
 - Coleção pessoal ("perfumes que eu tenho") — possível ponto de reconexão
   com o conceito do app antigo, mas agora como feature social, não como
   produto isolado
-- Curtir reviews de outros usuários
 - Editar review após um tempo de uso ("atualização após 3 meses"),
   mantendo o histórico da review original
 

@@ -70,6 +70,17 @@
         <strong>{{ review.user.profile.name }}</strong>
         <span style="color:var(--muted);">★ {{ review.rating }}/5 · {{ review.created_at|date:"d/m/Y" }}</span>
         <p style="margin:0.35rem 0 0;">{{ review.text }}</p>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'reviews:toggle_like' review_id=review.id %}" style="margin-top:0.4rem;">
+                {% csrf_token %}
+                <button type="submit" style="font-size:0.8rem; padding:0.3rem 0.7rem; {% if review.id in liked_review_ids %}background:var(--ink);{% else %}background:transparent; color:var(--ink); border:1px solid var(--border);{% endif %}">
+                    {% if review.id in liked_review_ids %}👍 Curtido{% else %}👍 Curtir{% endif %}
+                    {% if review.like_count %} ({{ review.like_count }}){% endif %}
+                </button>
+            </form>
+        {% elif review.like_count %}
+            <p style="color:var(--muted); font-size:0.8rem; margin-top:0.4rem;">👍 {{ review.like_count }}</p>
+        {% endif %}
     </div>
 {% empty %}
     <p style="color:var(--muted);">Nenhuma review ainda.</p>

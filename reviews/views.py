@@ -4,7 +4,7 @@ from django.views.decorators.http import require_POST
 
 from catalog.models import Perfume
 from reviews.forms import ReviewForm
-from reviews.models import Review
+from reviews.models import Review, ReviewLike
 
 
 @login_required
@@ -20,3 +20,16 @@ def create_review(request, slug):
         review.user = request.user
         review.save()
     return redirect("catalog:perfume_detail", slug=perfume.slug)
+
+
+@login_required
+@require_POST
+def toggle_like(request, review_id):
+    """Curte a review, ou descurte se o usuário já tiver curtido."""
+    review = get_object_or_404(Review, pk=review_id)
+    like = ReviewLike.objects.filter(review=review, user=request.user).first()
+    if like:
+        like.delete()
+    else:
+        ReviewLike.objects.create(review=review, user=request.user)
+    return redirect("catalog:perfume_detail", slug=review.perfume.slug)

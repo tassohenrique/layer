@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Accord, Perfume
 from reviews.forms import ReviewForm
+from reviews.models import ReviewLike
 
 
 def perfume_list(request):
@@ -42,12 +43,20 @@ def perfume_detail(request, slug):
         ),
         slug=slug,
     )
-    perfume_reviews = perfume.reviews.select_related("user", "user__profile")
+    perfume_reviews = perfume.reviews.select_related("user", "user__profile").annotate(
+        like_count=Count("likes")
+    )
     stats = perfume.rating_stats
 
     user_review = None
+    liked_review_ids: set[int] = set()
     if request.user.is_authenticated:
         user_review = perfume_reviews.filter(user=request.user).first()
+        liked_review_ids = set(
+            ReviewLike.objects.filter(user=request.user, review__perfume=perfume).values_list(
+                "review_id", flat=True
+            )
+        )
 
     context = {
         "perfume": perfume,
@@ -55,5 +64,6 @@ def perfume_detail(request, slug):
         "stats": stats,
         "form": ReviewForm(instance=user_review),
         "user_review": user_review,
+        "liked_review_ids": liked_review_ids,
     }
     return render(request, "catalog/perfume_detail.html", context)
