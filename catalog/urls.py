@@ -5,5 +5,6 @@ from catalog import views
 app_name = "catalog"
 urlpatterns = [
     path("", views.perfume_list, name="perfume_list"),
+    path("em-alta/", views.trending, name="trending"),
     path("perfumes/<slug:slug>/", views.perfume_detail, name="perfume_detail"),
 ]

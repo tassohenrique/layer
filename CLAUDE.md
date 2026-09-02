@@ -161,11 +161,19 @@ Profile       — user (OneToOne), display_name, avatar
   Escala em O(n) sobre todo o catálogo por view — aceitável com dezenas
   de perfumes; se o catálogo crescer muito, vira candidato a cache ou
   query mais esperta.
+- **"Em alta"** (`catalog/trending.py::trending_perfumes`, página
+  `/em-alta/`) — ranking dos perfumes com mais reviews + atualizações de
+  review + favoritos nos últimos 30 dias (`DEFAULT_WINDOW_DAYS`).
+  Mesma decisão de calcular em Python que `recommendations.py`: três
+  relações reversas diferentes (`reviews`, `reviews__updates`,
+  `favorited_by`) num só `annotate`+`Count` multiplicariam linhas entre
+  os joins antes de contar. Três queries simples de `values_list` em vez
+  disso, agregadas num dict em memória. Página pública, sem exigir
+  login, com link "Em alta" sempre visível no nav.
 
 ## Roadmap (não implementado ainda)
 
 ### Fase 3 — diferenciais avançados
-- "Em alta": ranking por atividade recente (reviews/favoritos)
 - Comparador de perfumes lado a lado
 - Diretório de marcas (`Brand` já existe, falta a página de navegação)
 - Conteúdo editorial (artigos/notícias de lançamento)

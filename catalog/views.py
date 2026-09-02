@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Accord, Perfume
 from catalog.recommendations import similar_perfumes
+from catalog.trending import DEFAULT_WINDOW_DAYS, trending_perfumes
 from favorites.models import Favorite
 from reviews.forms import ReviewForm, ReviewUpdateForm
 from reviews.models import ReviewLike
@@ -36,6 +37,14 @@ def perfume_list(request):
         "has_filters": bool(query or accord_key),
     }
     return render(request, "catalog/perfume_list.html", context)
+
+
+def trending(request):
+    context = {
+        "perfumes": trending_perfumes(),
+        "window_days": DEFAULT_WINDOW_DAYS,
+    }
+    return render(request, "catalog/trending.html", context)
 
 
 def perfume_detail(request, slug):
