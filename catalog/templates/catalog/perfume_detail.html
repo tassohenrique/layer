@@ -2,8 +2,17 @@
 {% block title %}{{ perfume.name }} — Layer{% endblock %}
 {% block content %}
 <p><a href="{% url 'catalog:perfume_list' %}">← Perfumes</a></p>
-<h1>{{ perfume.name }}</h1>
-<p style="color:var(--muted);">{{ perfume.brand.name }}{% if perfume.launch_year %} · {{ perfume.launch_year }}{% endif %}</p>
+<div style="display:flex; gap:1.5rem; align-items:flex-start;">
+    {% if perfume.image %}
+        <img src="{{ perfume.image.url }}" alt="{{ perfume.name }}" style="width:140px; height:140px; object-fit:cover; border-radius:10px; flex-shrink:0;">
+    {% else %}
+        <div style="width:140px; height:140px; border-radius:10px; background:#f3ede4; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:2.5rem;">🌸</div>
+    {% endif %}
+    <div>
+        <h1 style="margin-bottom:0.25rem;">{{ perfume.name }}</h1>
+        <p style="color:var(--muted); margin-top:0;">{{ perfume.brand.name }}{% if perfume.launch_year %} · {{ perfume.launch_year }}{% endif %}</p>
+    </div>
+</div>
 
 <p>
     {% if stats.count %}
