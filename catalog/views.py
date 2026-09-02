@@ -2,6 +2,7 @@ from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Accord, Perfume
+from favorites.models import Favorite
 from reviews.forms import ReviewForm
 from reviews.models import ReviewLike
 
@@ -49,9 +50,11 @@ def perfume_detail(request, slug):
     stats = perfume.rating_stats
 
     user_review = None
+    is_favorited = False
     liked_review_ids: set[int] = set()
     if request.user.is_authenticated:
         user_review = perfume_reviews.filter(user=request.user).first()
+        is_favorited = Favorite.objects.filter(user=request.user, perfume=perfume).exists()
         liked_review_ids = set(
             ReviewLike.objects.filter(user=request.user, review__perfume=perfume).values_list(
                 "review_id", flat=True
@@ -64,6 +67,8 @@ def perfume_detail(request, slug):
         "stats": stats,
         "form": ReviewForm(instance=user_review),
         "user_review": user_review,
+        "is_favorited": is_favorited,
+        "favorite_count": perfume.favorited_by.count(),
         "liked_review_ids": liked_review_ids,
     }
     return render(request, "catalog/perfume_detail.html", context)

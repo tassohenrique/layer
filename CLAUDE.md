@@ -116,6 +116,10 @@ Profile       — user (OneToOne), display_name, avatar
   notas, e filtro por accord (`?accord=<key>`). Os dois usam `.distinct()`
   porque filtrar por M2M pode duplicar linhas. Estado vazio diferencia
   "nada cadastrado" de "busca sem resultado".
+- **Favoritar perfumes** (app `favorites`, model `Favorite`,
+  `unique_together (user, perfume)`) — botão de favoritar/desfavoritar
+  (toggle via POST) na página do perfume, contador de quantas pessoas
+  favoritaram, e uma página `/favoritos/` com a lista do usuário logado.
 - **Curtir reviews** (`reviews/models.py::ReviewLike`,
   `unique_together (review, user)`) — botão de curtir/descurtir (toggle
   via POST) em cada review na página do perfume, com contagem. O autor
@@ -127,7 +131,6 @@ Profile       — user (OneToOne), display_name, avatar
 ## Roadmap (não implementado ainda)
 
 ### Fase 2 — engajamento e descoberta
-- Favoritar perfumes (wishlist)
 - Coleção pessoal ("perfumes que eu tenho") — possível ponto de reconexão
   com o conceito do app antigo, mas agora como feature social, não como
   produto isolado
