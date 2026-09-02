@@ -1,7 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Meus favoritos — Layer{% endblock %}
+{% block title %}Minha lista — Layer{% endblock %}
 {% block content %}
-<h1>Meus favoritos</h1>
+<h1>Minha lista</h1>
+
+<div style="display:flex; gap:1rem; margin-top:1rem;">
+    <a href="{% url 'favorites:favorite_list' %}" style="{% if not status %}font-weight:bold;{% endif %}">Todos</a>
+    <a href="?status=wishlist" style="{% if status == 'wishlist' %}font-weight:bold;{% endif %}">Quero ter</a>
+    <a href="?status=owned" style="{% if status == 'owned' %}font-weight:bold;{% endif %}">Tenho</a>
+</div>
+
 <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem;">
     {% for favorite in favorites %}
         <a href="{{ favorite.perfume.get_absolute_url }}" style="text-decoration:none; color:inherit;">
@@ -13,11 +20,18 @@
                 {% endif %}
                 <div>
                     <strong>{{ favorite.perfume.name }}</strong> <span style="color:var(--muted);">— {{ favorite.perfume.brand.name }}</span>
+                    <div style="color:var(--muted); font-size:0.85rem;">{% if favorite.owned %}📦 Tenho{% else %}♡ Quero ter{% endif %}</div>
                 </div>
             </div>
         </a>
     {% empty %}
-        <p>Você ainda não favoritou nenhum perfume. <a href="{% url 'catalog:perfume_list' %}">Explorar o catálogo</a>.</p>
+        {% if status == "owned" %}
+            <p>Você ainda não marcou nenhum perfume como "tenho".</p>
+        {% elif status == "wishlist" %}
+            <p>Nada na sua lista de "quero ter" ainda.</p>
+        {% else %}
+            <p>Sua lista está vazia. <a href="{% url 'catalog:perfume_list' %}">Explorar o catálogo</a>.</p>
+        {% endif %}
     {% endfor %}
 </div>
 {% endblock %}

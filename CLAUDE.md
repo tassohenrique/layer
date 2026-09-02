@@ -116,10 +116,18 @@ Profile       — user (OneToOne), display_name, avatar
   notas, e filtro por accord (`?accord=<key>`). Os dois usam `.distinct()`
   porque filtrar por M2M pode duplicar linhas. Estado vazio diferencia
   "nada cadastrado" de "busca sem resultado".
-- **Favoritar perfumes** (app `favorites`, model `Favorite`,
-  `unique_together (user, perfume)`) — botão de favoritar/desfavoritar
-  (toggle via POST) na página do perfume, contador de quantas pessoas
-  favoritaram, e uma página `/favoritos/` com a lista do usuário logado.
+- **Favoritar perfumes + coleção pessoal** (app `favorites`, model
+  `Favorite`, `unique_together (user, perfume)`) — o mesmo registro guarda
+  as duas coisas: existência da linha = "quero ter" (favorito), campo
+  `owned=True` = "tenho" (coleção). Botão de favoritar (cria/apaga a
+  linha) e botão separado "📦 Tenho esse perfume" (`toggle_owned`, cria a
+  linha com `owned=True` se não existir, senão inverte o campo — nunca
+  apaga por engano o "quero ter" de quem já tinha favoritado). Página
+  `/favoritos/` ("Minha lista") tem abas Todos/Quero ter/Tenho via
+  `?status=`. Decisão deliberada de **não** criar um app/model separado
+  pra "coleção" — o roadmap pedia reconexão com o conceito do app antigo
+  como feature social, não como produto isolado (sem ml_remaining, sem
+  nota pessoal, sem diário — só o flag de posse).
 - **Curtir reviews** (`reviews/models.py::ReviewLike`,
   `unique_together (review, user)`) — botão de curtir/descurtir (toggle
   via POST) em cada review na página do perfume, com contagem. O autor
@@ -131,9 +139,6 @@ Profile       — user (OneToOne), display_name, avatar
 ## Roadmap (não implementado ainda)
 
 ### Fase 2 — engajamento e descoberta
-- Coleção pessoal ("perfumes que eu tenho") — possível ponto de reconexão
-  com o conceito do app antigo, mas agora como feature social, não como
-  produto isolado
 - Editar review após um tempo de uso ("atualização após 3 meses"),
   mantendo o histórico da review original
 

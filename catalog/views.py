@@ -51,10 +51,13 @@ def perfume_detail(request, slug):
 
     user_review = None
     is_favorited = False
+    is_owned = False
     liked_review_ids: set[int] = set()
     if request.user.is_authenticated:
         user_review = perfume_reviews.filter(user=request.user).first()
-        is_favorited = Favorite.objects.filter(user=request.user, perfume=perfume).exists()
+        user_favorite = Favorite.objects.filter(user=request.user, perfume=perfume).first()
+        is_favorited = user_favorite is not None
+        is_owned = bool(user_favorite and user_favorite.owned)
         liked_review_ids = set(
             ReviewLike.objects.filter(user=request.user, review__perfume=perfume).values_list(
                 "review_id", flat=True
@@ -68,7 +71,9 @@ def perfume_detail(request, slug):
         "form": ReviewForm(instance=user_review),
         "user_review": user_review,
         "is_favorited": is_favorited,
+        "is_owned": is_owned,
         "favorite_count": perfume.favorited_by.count(),
+        "owned_count": perfume.favorited_by.filter(owned=True).count(),
         "liked_review_ids": liked_review_ids,
     }
     return render(request, "catalog/perfume_detail.html", context)

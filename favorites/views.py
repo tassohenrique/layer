@@ -20,6 +20,25 @@ def toggle_favorite(request, slug):
 
 
 @login_required
+@require_POST
+def toggle_owned(request, slug):
+    """Marca o perfume como possuído (cria o favorito se preciso), ou desmarca sem sair da lista."""
+    perfume = get_object_or_404(Perfume, slug=slug)
+    favorite, created = Favorite.objects.get_or_create(user=request.user, perfume=perfume)
+    favorite.owned = True if created else not favorite.owned
+    favorite.save()
+    return redirect("catalog:perfume_detail", slug=perfume.slug)
+
+
+@login_required
 def favorite_list(request):
+    status = request.GET.get("status", "").strip()
+
     favorites = Favorite.objects.filter(user=request.user).select_related("perfume", "perfume__brand")
-    return render(request, "favorites/favorite_list.html", {"favorites": favorites})
+    if status == "owned":
+        favorites = favorites.filter(owned=True)
+    elif status == "wishlist":
+        favorites = favorites.filter(owned=False)
+
+    context = {"favorites": favorites, "status": status}
+    return render(request, "favorites/favorite_list.html", context)
