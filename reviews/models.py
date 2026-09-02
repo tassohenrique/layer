@@ -21,3 +21,17 @@ class Review(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} → {self.perfume} ({self.rating})"
+
+
+class ReviewLike(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="review_likes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["review", "user"], name="one_like_per_user_per_review"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} curtiu a review de {self.review.user} em {self.review.perfume}"
