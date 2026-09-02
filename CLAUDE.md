@@ -120,6 +120,13 @@ Profile       — user (OneToOne), display_name, avatar
   `unique_together (user, perfume)`) — botão de favoritar/desfavoritar
   (toggle via POST) na página do perfume, contador de quantas pessoas
   favoritaram, e uma página `/favoritos/` com a lista do usuário logado.
+- **Curtir reviews** (`reviews/models.py::ReviewLike`,
+  `unique_together (review, user)`) — botão de curtir/descurtir (toggle
+  via POST) em cada review na página do perfume, com contagem. O autor
+  pode curtir a própria review (sem regra especial pra isso, igual ao
+  Fragrantica). `catalog/views.py::perfume_detail` anota `like_count` via
+  `Count("likes")` e monta um `set` dos ids de review que o usuário logado
+  já curtiu, pra não fazer 1 query por review no template.
 
 ## Roadmap (não implementado ainda)
 
@@ -127,7 +134,6 @@ Profile       — user (OneToOne), display_name, avatar
 - Coleção pessoal ("perfumes que eu tenho") — possível ponto de reconexão
   com o conceito do app antigo, mas agora como feature social, não como
   produto isolado
-- Curtir reviews de outros usuários
 - Editar review após um tempo de uso ("atualização após 3 meses"),
   mantendo o histórico da review original
 
