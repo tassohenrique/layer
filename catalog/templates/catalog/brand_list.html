@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Marcas — Layer{% endblock %}
+{% block content %}
+<h1>Marcas</h1>
+
+<form method="get" style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+    <input
+        type="text" name="q" value="{{ query }}"
+        placeholder="Buscar marca"
+        style="flex:1; min-width:220px;"
+    >
+    <button type="submit">Buscar</button>
+    {% if query %}
+        <a href="{% url 'catalog:brand_list' %}" style="align-self:center; color:var(--muted);">Limpar</a>
+    {% endif %}
+</form>
+
+<div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem;">
+    {% for brand in brands %}
+        <a href="{{ brand.get_absolute_url }}" style="text-decoration:none; color:inherit;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border); border-radius:8px; padding:1rem;">
+                <strong>{{ brand.name }}</strong>
+                <span style="color:var(--muted); font-size:0.9rem;">
+                    {{ brand.perfume_count }} perfume{{ brand.perfume_count|pluralize }}
+                </span>
+            </div>
+        </a>
+    {% empty %}
+        {% if query %}
+            <p>Nenhuma marca encontrada pra essa busca.</p>
+        {% else %}
+            <p>Nenhuma marca cadastrada ainda.</p>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}
