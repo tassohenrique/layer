@@ -18,6 +18,9 @@ class Brand(models.Model):
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
+    def get_absolute_url(self) -> str:
+        return reverse("catalog:brand_detail", kwargs={"slug": self.slug})
+
 
 class Accord(models.Model):
     """Família olfativa (ex.: amadeirado, cítrico, doce) — usada como tag do perfume."""
