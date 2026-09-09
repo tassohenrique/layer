@@ -1,7 +1,7 @@
 from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, render
 
-from catalog.models import Accord, Perfume
+from catalog.models import Accord, Brand, Perfume
 from catalog.recommendations import similar_perfumes
 from catalog.trending import DEFAULT_WINDOW_DAYS, trending_perfumes
 from favorites.models import Favorite
@@ -45,6 +45,36 @@ def trending(request):
         "window_days": DEFAULT_WINDOW_DAYS,
     }
     return render(request, "catalog/trending.html", context)
+
+
+def brand_list(request):
+    query = request.GET.get("q", "").strip()
+
+    brands = Brand.objects.annotate(perfume_count=Count("perfumes"))
+
+    if query:
+        brands = brands.filter(name__icontains=query)
+
+    context = {
+        "brands": brands,
+        "query": query,
+    }
+    return render(request, "catalog/brand_list.html", context)
+
+
+def brand_detail(request, slug):
+    brand = get_object_or_404(Brand, slug=slug)
+    perfumes = (
+        Perfume.objects.filter(brand=brand)
+        .select_related("brand")
+        .annotate(avg_rating=Avg("reviews__rating"), review_count=Count("reviews"))
+    )
+
+    context = {
+        "brand": brand,
+        "perfumes": perfumes,
+    }
+    return render(request, "catalog/brand_detail.html", context)
 
 
 def perfume_detail(request, slug):
