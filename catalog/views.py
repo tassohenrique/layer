@@ -1,6 +1,7 @@
 from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404, render
 
+from catalog.compare import MAX_COMPARE, parse_compare_slugs
 from catalog.models import Accord, Brand, Perfume
 from catalog.recommendations import similar_perfumes
 from catalog.trending import DEFAULT_WINDOW_DAYS, trending_perfumes
@@ -75,6 +76,29 @@ def brand_detail(request, slug):
         "perfumes": perfumes,
     }
     return render(request, "catalog/brand_detail.html", context)
+
+
+def compare(request):
+    slugs = parse_compare_slugs(request.GET)
+
+    perfumes_by_slug = {
+        perfume.slug: perfume
+        for perfume in Perfume.objects.filter(slug__in=slugs)
+        .select_related("brand")
+        .prefetch_related("notes_top", "notes_heart", "notes_base", "accords")
+    }
+    # reconstrói na ordem dos slugs (query não garante ordem de um filter __in)
+    perfumes = [perfumes_by_slug[s] for s in slugs if s in perfumes_by_slug]
+
+    context = {
+        "perfumes": perfumes,
+        "stats": {perfume.slug: perfume.rating_stats for perfume in perfumes},
+        "selected_slugs": slugs,
+        "all_perfumes": Perfume.objects.select_related("brand"),
+        "max_compare": MAX_COMPARE,
+        "can_add_more": len(perfumes) < MAX_COMPARE,
+    }
+    return render(request, "catalog/compare.html", context)
 
 
 def perfume_detail(request, slug):
